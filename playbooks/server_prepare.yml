@@ -1,0 +1,50 @@
+---
+- name: Prepare server for operation
+  hosts: "{{ target | default('remote-test-ubuntu') }}"
+  gather_facts: true
+  become: yes
+  become_method: sudo
+  vars:
+    # Playbooks decides if reboot is required
+    reboot_required: false
+    # User-defined approve to automatic reboot if required
+    reboot_approved: false
+    # *** WARNING! *** All the data on disk and partition which will be encrypted will be lost! Make sure you won't lose anything important!
+
+#  vars_prompt:
+#    - name: reboot_approved
+#      prompt: Server might need to be rebooted to apply changes. Would you like to reboot it automatically if needed? (yes/no)
+#      private: false
+#      default: "yes"
+
+
+  # Tasks before running the role
+  pre_tasks:
+
+  - name: Is that Ubuntu 24?
+    debug:
+      msg: "Checking if that's Ubuntu 24..."
+    failed_when: ansible_distribution != "Ubuntu" or ansible_distribution_major_version != "24"
+
+  - name: Package installation
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      update_cache: yes
+    loop:
+    - cryptsetup
+    - cpufrequtils
+
+  roles:
+    - server_prep
+
+  post_tasks:
+
+  - name: Rebooting the server and waiting 2 mins to reconnect...
+    reboot:
+      reboot_timeout: 120
+    when: reboot_required and reboot_approved
+
+  - name: Reboot is required
+    debug:
+      msg: "*** WARNING! *** Server needs to be rebooted to apply changes! Reboot it manually."
+    when: reboot_required and not reboot_approved

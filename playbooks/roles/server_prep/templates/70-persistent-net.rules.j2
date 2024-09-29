@@ -1,0 +1,3 @@
+# Modify ATTR{address} with MAC of the network interface and NAME paramter with the new desired name.
+
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="{{ macaddress }}", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="{{ oldinterface }}", NAME="net0"

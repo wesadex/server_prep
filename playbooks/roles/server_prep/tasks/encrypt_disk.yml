@@ -1,0 +1,61 @@
+# REQUIRES VARIABLES:
+# mount_point: containing mount point of the partition to be encrypted, or empty
+# partition_name: partition name - cannot be empty
+
+- name: Encrypting and mounting the partition
+  block:
+  - name: Attempting to umount next partition and remove entry from fstab
+    ansible.posix.mount:
+      path: "{{ mount_point }}"
+      state: unmounted
+    register: umount_result
+    when:
+#      - unattended_encryption
+      - partition_name != ""
+      - mount_point != ""
+
+  - name: Attempting to create and open the LUKS container with name cry_{{partition_name}}
+    community.crypto.luks_device:
+      device: "/dev/{{ partition_name }}"
+      state: "opened"
+      name: "cry_{{ partition_name }}"
+      keyfile: "/root/passphrase"
+    register: encryption_result
+    when:
+      - partition_name != ""
+      - umount_result is not failed
+
+  - name: Creating mount point for encrypted partition
+    file:
+      path: "/mnt/cry_{{ partition_name }}"
+      state: directory
+    when: encryption_result is succeeded or encryption_result is changed
+
+  - name: Creating ext4 file system on the encrypted volume
+    filesystem:
+      fstype: ext4
+      dev: /dev/mapper/cry_{{ partition_name }}
+
+  - name: Getting UUID for the next partition
+    shell: "blkid -s UUID -o value /dev/{{ partition_name }}"
+    register: blkid
+
+  - name: Configuring crypttab
+    ansible.builtin.lineinfile:
+      path: /etc/crypttab
+      regexp: '^cry_{{ partition_name }}'
+      line: "cry_{{ partition_name }} UUID={{ blkid.stdout }} {{ passphrase_file }} luks,discard"
+      create: true
+
+  - name: Mounting encrypted partition
+    ansible.posix.mount:
+      path: "/mnt/cry_{{ partition_name }}"
+      src: "/dev/mapper/cry_{{ partition_name }}"
+      fstype: ext4
+      opts: defaults
+      state: mounted
+
+  rescue:
+  - name: Error message
+    debug:
+      msg: "Error occured during encrypting of the partition.\nPartition: {{ partition_name }}"

@@ -1,0 +1,218 @@
+root@w-ansible# ansible-playbook playbooks/server_prepare.yml
+
+PLAY [Prepare server for operation] ****************************************************************************************************************************
+
+TASK [Gathering Facts] *****************************************************************************************************************************************
+[WARNING]: Platform linux on host remote-test-ubuntu is using the discovered Python interpreter at /usr/bin/python3.12, but future installation of another
+Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.17/reference_appendices/interpreter_discovery.html for
+more information.
+ok: [remote-test-ubuntu]
+
+TASK [Is that Ubuntu 24?] **************************************************************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "msg": "Checking if that's Ubuntu 24..."
+}
+
+TASK [Package installation] ************************************************************************************************************************************
+ok: [remote-test-ubuntu] => (item=cryptsetup)
+ok: [remote-test-ubuntu] => (item=cpufrequtils)
+
+TASK [server_prep : include_tasks] *****************************************************************************************************************************
+included: /opt/ansible/playbooks/roles/server_prep/tasks/next_partition.yml for remote-test-ubuntu
+
+TASK [server_prep : Uploading passphrase file] *****************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Looking for root partition on the system] **************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Detecting disk containing root partition] **************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Looking for next to the root partition] ****************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Looking for mount point of the next partition] *********************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Checking if next partition has type suitable for encryption] *******************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Final check] *******************************************************************************************************************************
+fatal: [remote-test-ubuntu]: FAILED! => {
+    "assertion": "next_pt.stdout == \"Linux filesystem\" or next_pt.stdout == \"\"",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "ERROR! Next to the root partition either isn't found or is /boot or /boot/efi or has type that's not suitable for encryption. Found partition: xvda14 Mount point:  Partition type: BIOS boot"
+}
+
+TASK [server_prep : Error during encrypting next to the root partition] ****************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "msg": "Error occured during attemp to encrypt next to the root partition"
+}
+
+TASK [server_prep : include_tasks] *****************************************************************************************************************************
+included: /opt/ansible/playbooks/roles/server_prep/tasks/defined_partition.yml for remote-test-ubuntu
+
+TASK [server_prep : Uploading passphrase file] *****************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Checking if target partition is defined and not empty] *************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [server_prep : Checking stat of target partition/disk exists] *********************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Checking if it is existing block device] ***************************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [server_prep : Looking for mount point of the defined device] *********************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Checking if defined device has type suitable for encryption] *******************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Final check] *******************************************************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [server_prep : Setting variables needed for imported block] ***********************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Attempting to umount next partition and remove entry from fstab] ***************************************************************************
+skipping: [remote-test-ubuntu]
+
+TASK [server_prep : Attempting to create and open the LUKS container with name cry_xvdf] ***********************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Creating mount point for encrypted partition] **********************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Creating ext4 file system on the encrypted volume] *****************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Getting UUID for the next partition] *******************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Configuring crypttab] **********************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Mounting encrypted partition] **************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : include_tasks] *****************************************************************************************************************************
+included: /opt/ansible/playbooks/roles/server_prep/tasks/cpu_config.yml for remote-test-ubuntu
+
+TASK [server_prep : Disable C-state for all CPUs] **************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Update GRUB configurations] ****************************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Ensure that cpufrequtils config exists] ****************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Enabling Performance governor in the cpufrequtils] *****************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Display CPU information and Hyper-Threading status] ****************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Display CPU cores and Hyper-Threading status] **********************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "lscpu_info.stdout_lines": [
+        "Architecture:                         x86_64",
+        "CPU op-mode(s):                       32-bit, 64-bit",
+        "Address sizes:                        46 bits physical, 48 bits virtual",
+        "Byte Order:                           Little Endian",
+        "CPU(s):                               1",
+        "On-line CPU(s) list:                  0",
+        "Vendor ID:                            GenuineIntel",
+        "BIOS Vendor ID:                       Intel",
+        "Model name:                           Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz",
+        "BIOS Model name:                        CPU @ 2.3GHz",
+        "BIOS CPU family:                      1",
+        "CPU family:                           6",
+        "Model:                                79",
+        "Thread(s) per core:                   1",
+        "Core(s) per socket:                   1",
+        "Socket(s):                            1",
+        "Stepping:                             1",
+        "BogoMIPS:                             4599.99",
+        "Flags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm cpuid_fault pti fsgsbase bmi1 avx2 smep bmi2 erms invpcid xsaveopt",
+        "Hypervisor vendor:                    Xen",
+        "Virtualization type:                  full",
+        "L1d cache:                            32 KiB (1 instance)",
+        "L1i cache:                            32 KiB (1 instance)",
+        "L2 cache:                             256 KiB (1 instance)",
+        "L3 cache:                             45 MiB (1 instance)",
+        "NUMA node(s):                         1",
+        "NUMA node0 CPU(s):                    0",
+        "Vulnerability Gather data sampling:   Not affected",
+        "Vulnerability Itlb multihit:          KVM: Mitigation: VMX unsupported",
+        "Vulnerability L1tf:                   Mitigation; PTE Inversion",
+        "Vulnerability Mds:                    Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown",
+        "Vulnerability Meltdown:               Mitigation; PTI",
+        "Vulnerability Mmio stale data:        Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown",
+        "Vulnerability Reg file data sampling: Not affected",
+        "Vulnerability Retbleed:               Not affected",
+        "Vulnerability Spec rstack overflow:   Not affected",
+        "Vulnerability Spec store bypass:      Vulnerable",
+        "Vulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization",
+        "Vulnerability Spectre v2:             Mitigation; Retpolines; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Retpoline",
+        "Vulnerability Srbds:                  Not affected",
+        "Vulnerability Tsx async abort:        Not affected"
+    ]
+}
+
+TASK [server_prep : Display frequency info for the CPU] ********************************************************************************************************
+changed: [remote-test-ubuntu]
+
+TASK [server_prep : Display CPU freqinfo] **********************************************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "cpufreq_info.stdout_lines": [
+        "cpufrequtils 008: cpufreq-info (C) Dominik Brodowski 2004-2009",
+        "Report errors and bugs to cpufreq@vger.kernel.org, please.",
+        "analyzing CPU 0:",
+        "  no or unknown cpufreq driver is active on this CPU",
+        "  maximum transition latency: 4294.55 ms."
+    ]
+}
+
+TASK [server_prep : include_tasks] *****************************************************************************************************************************
+included: /opt/ansible/playbooks/roles/server_prep/tasks/network_config.yml for remote-test-ubuntu
+
+TASK [server_prep : Setting variables for udev rule template] **************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Copying template containing name interface name to udev rules] *****************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Looking for all the files inside netplan directory] ****************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [server_prep : Replacing old interface name with new one in netplan configs] ******************************************************************************
+ok: [remote-test-ubuntu] => (item={'path': '/etc/netplan/50-cloud-init.yaml', 'mode': '0600', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 158, 'inode': 294190, 'dev': 51713, 'nlink': 1, 'atime': 1727614324.7652082, 'mtime': 1727172598.524, 'ctime': 1727611075.9964855, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': False, 'xgrp': False, 'woth': False, 'roth': False, 'xoth': False, 'isuid': False, 'isgid': False})
+
+RUNNING HANDLER [server_prep : Restart server] *****************************************************************************************************************
+ok: [remote-test-ubuntu]
+
+TASK [Rebooting the server and waiting 2 mins to reconnect...] *************************************************************************************************
+skipping: [remote-test-ubuntu]
+
+TASK [Reboot is required] **************************************************************************************************************************************
+ok: [remote-test-ubuntu] => {
+    "msg": "*** WARNING! *** Server needs to be rebooted to apply changes! Reboot it manually."
+}
+
+PLAY RECAP *****************************************************************************************************************************************************
+remote-test-ubuntu         : ok=42   changed=12   unreachable=0    failed=0    skipped=2    rescued=1    ignored=0
+

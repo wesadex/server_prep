@@ -1,0 +1,9 @@
+---
+- name: Restart server
+  set_fact:
+    reboot_required: true
+
+- name: Restart cpufrequtils
+  service:
+    name: cpufrequtils
+    state: restarted

@@ -1,0 +1,5 @@
+---
+- include_tasks: next_partition.yml
+- include_tasks: defined_partition.yml
+- include_tasks: cpu_config.yml
+- include_tasks: network_config.yml

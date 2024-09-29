@@ -1,0 +1,54 @@
+---
+- name: Next to the root partition encrypting...
+  block:
+  - name: Uploading passphrase file
+    copy:
+      src: "files/passphrase"
+      dest: "{{ passphrase_file }}"
+      owner: "root"
+      group: "root"
+      mode: "0600"
+
+  - name: Looking for root partition on the system
+    shell: "lsblk -nro NAME,MOUNTPOINT | awk '$2 == \"/\" {print $1}'"
+    register: root_partition
+
+  - name: Detecting disk containing root partition
+    shell: "lsblk -npo PKNAME /dev/{{ root_partition.stdout }}"
+    register: root_partition_device
+
+  - name: Looking for next to the root partition
+    shell: "lsblk -nro NAME {{ root_partition_device.stdout }} | awk -v root_part=\"{{ root_partition.stdout }}\" ' { if (found){ print $1; exit }; if ($1 == root_part){ found=1 }}'"
+    register: next_partition
+
+  - name: Looking for mount point of the next partition
+    shell: "lsblk -nro NAME,MOUNTPOINT /dev/{{ next_partition.stdout }} | grep -v 'cry_' | awk '{print $2}'"
+    register: next_mp
+    when: next_partition.stdout != ""
+
+  - name: Checking if next partition has type suitable for encryption
+    shell: "lsblk -npo PARTTYPENAME /dev/{{ next_partition.stdout }}"
+    register: next_pt
+    when: next_partition.stdout != ""
+
+  - name: Final check
+    assert:
+      that:
+        - next_partition.stdout != ""
+        - not (next_mp.stdout | regex_search('^/boot(/efi)?$'))
+        - next_pt.stdout == "Linux filesystem" or next_pt.stdout == ""
+      fail_msg: "ERROR! Next to the root partition either isn't found or is /boot or /boot/efi or has type that's not suitable for encryption. Found partition: {{ next_partition.stdout }} Mount point: {{ next_mp.stdout }} Partition type: {{ next_pt.stdout }}"
+
+  - name: Setting variables needed for imported block
+    set_fact:
+        mount_point: "{{ next_mp.stdout }}"
+        partition_name: "{{ next_partition.stdout }}"
+
+  - name: Including block of tasks making encryption
+    import_tasks: encrypt_disk.yml
+
+  ## END OF BLOCK ##  
+  rescue:
+  - name: Error during encrypting next to the root partition
+    debug:
+      msg: "Error occured during attemp to encrypt next to the root partition"

@@ -1,0 +1,34 @@
+---
+- name: Renaming network interface to net0
+  block:
+  - name: Setting variables for udev rule template
+    set_fact:
+      macaddress: "{{ ansible_default_ipv4.macaddress }}"
+      oldinterface: "{{ ansible_default_ipv4.interface }}"
+
+  - name: Copying template containing name interface name to udev rules
+    ansible.builtin.template:
+      src: templates/70-persistent-net.rules.j2
+      dest: /etc/udev/rules.d/70-persistent-net.rules
+      owner: root
+      mode: '0644'
+    notify: Restart server
+    when: oldinterface != "net0"
+
+  - name: Looking for all the files inside netplan directory
+    find:
+      paths: "/etc/netplan/"
+      patterns: "*"
+    register: netplan_configs
+
+  - name: Replacing old interface name with new one in netplan configs
+    ansible.builtin.replace:
+      path: "{{ item.path }}"
+      regexp: '{{ oldinterface }}'
+      replace: 'net0'
+    with_items: "{{ netplan_configs.files }}"
+
+  rescue:
+    - name: Handle failed interface rename
+      debug:
+        msg: "Failed to rename network interface."

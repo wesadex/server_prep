@@ -1,0 +1,59 @@
+---
+- name: Uploading passphrase file
+  copy:
+    src: "files/passphrase"
+    dest: "{{ passphrase_file }}"
+    owner: "root"
+    group: "root"
+    mode: "0600"
+
+  ## BLOCK ##
+- name: Initial checks
+  block:
+  - name: Checking if target partition is defined and not empty
+    assert:
+      that:
+        - encrypted_disk is defined
+        - encrypted_disk != ""
+      fail_msg: "ERROR! Disk name for encryption is not defined or empty"
+
+  - name: Checking stat of target partition/disk exists
+    stat:
+      path: "{{ encrypted_disk }}"
+    register: partition_stat
+
+  - name: Checking if it is existing block device
+    assert:
+      that:
+        - partition_stat.stat.exists
+        - partition_stat.stat.isblk
+      fail_msg: "ERROR! Target partition is either not found or not a block device"
+
+  - name: Looking for mount point of the defined device
+    shell: "lsblk -nro NAME,MOUNTPOINT /{{ encrypted_disk }} | grep -v 'cry_' | awk '{print $2}'"
+    register: mp
+
+  - name: Checking if defined device has type suitable for encryption
+    shell: "lsblk -npo PARTTYPENAME {{ encrypted_disk }}"
+    register: pt_type
+
+  - name: Final check
+    assert:
+      that:
+        - not mp.stdout | regex_search('^/boot(/efi)?$')
+        - pt_type.stdout == "Linux filesystem" or pt_type.stdout == ""
+      fail_msg: "ERROR! Defined device either is /boot or /boot/efi or has type not suitable for encryption. Device: {{ encrypted_disk }} Mount point: {{ mp.stdout }} Partition type: {{ pt_type.stdout }}"
+
+  - name: Setting variables needed for imported block
+    set_fact:
+        mount_point: "{{ mp.stdout }}"
+        partition_name: "{{ encrypted_disk | regex_replace('^/dev/', '') }}"
+
+  - name: Including block of tasks making encryption
+    import_tasks: encrypt_disk.yml
+
+  ## END OF BLOCK
+  rescue:
+  - name: Status of the checks
+    ansible.builtin.debug:
+      msg: 'Error occured during initial check or encryption.'
