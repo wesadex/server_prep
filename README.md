@@ -26,7 +26,7 @@ All required files (playbooks, roles, scripts) must be submitted along with the 
 ### WARNING! Playbook encrypts target partition/disk without user confirmation. All the data on these partition and disk will be lost!
 
 - Clone the repo into /opt folder
-- `cd server_prepare`
+- `cd server_prep`
 - Create python3 virtual environment in /opt/server_prepare - `python3 -m venv .`
 - Install python3 modules accordingly to description of environment below
 - Update variable `reboot_approved` (`true` - automatic reboot, `false` - manual reboot) in the playbook
